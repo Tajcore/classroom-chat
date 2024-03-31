@@ -15,11 +15,12 @@ datasource db {
 }
 
 model Room {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    chats     Message[]
+    id          Int       @id @default(autoincrement())
+    name        String
+    description String?
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+    chats       Message[]
 
     createdBy   User   @relation(fields: [createdById], references: [id])
     createdById String
@@ -35,15 +36,14 @@ model Message {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    room      Room    @relation(fields: [roomId], references: [id])
-    roomId    Int
+    room   Room @relation(fields: [roomId], references: [id])
+    roomId Int
 
-    createdBy User    @relation(fields: [userId], references: [id])
+    createdBy User   @relation(fields: [userId], references: [id])
     userId    String
 
     @@index([roomId])
 }
-
 
 // Necessary for Next auth
 model Account {
