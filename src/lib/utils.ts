@@ -64,7 +64,7 @@ export function convertChatObjectsToChatLog(chats: { id: number; content: string
 
   chats.forEach((chat) => {
     chatLog.push({
-      // @ts-ignore
+      // ts-ignore
       name: chat.createdBy.name ?? "Anonymous",
       role: chat.userId === teacherId ? "Teacher" : "Student",
       timestamp: chat.createdAt,

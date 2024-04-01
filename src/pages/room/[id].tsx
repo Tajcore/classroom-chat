@@ -348,7 +348,7 @@ const ChatRoom = () => {
                           {user.name}
                         </h3>
                         <p className="text-xs text-gray-500">
-                          {user.id.toString === roomData?.createdBy?.id
+                          {user.id.toString() === roomData?.createdBy?.id
                             ? "Teacher"
                             : "Student"}{" "}
                         </p>
