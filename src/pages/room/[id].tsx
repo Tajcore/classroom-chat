@@ -86,7 +86,7 @@ const ChatRoom = () => {
         onSuccess: (data) => {
           form.reset();
           scrollToBottomOfChat();
-          // @ts-ignore
+          // @ts-expect-error - ts-expect-error
           setMessages((prev) => [...prev, data]);
         },
       },

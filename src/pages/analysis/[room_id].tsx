@@ -19,7 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { Button } from "@/components/ui/button";
 import { Info } from "lucide-react";
 import {
   Dialog,
@@ -27,7 +26,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useState } from "react";
 
@@ -84,7 +82,7 @@ const RoomAnalysis = () => {
               <p>
                 The problem at hand involves analyzing a chat log to quantify
                 student participation in an educational context. In online
-                learning environments, it's crucial to have objective measures
+                learning environments, it&apos;s crucial to have objective measures
                 of student engagement. Our goal is to develop an algorithm that
                 grades students based on the frequency of their contributions
                 and their interactions with teachers, specifically responding to
@@ -146,7 +144,7 @@ const RoomAnalysis = () => {
             <section>
               <h2 className="text-semibold">Proof of Correctness</h2>
               <p>
-                The algorithm's correctness can be established through
+                The algorithm&apos;s correctness can be established through
                 induction:
                 <ul>
                   <li>
@@ -157,8 +155,8 @@ const RoomAnalysis = () => {
                     <strong>Inductive step:</strong> Assuming correct scores up
                     to the \(n\)th message, the \((n+1)\)th message processing
                     correctly updates scores based on our criteria (10 points
-                    for any message, 50 for answering a teacher's question).
-                    This ensures the algorithm's correctness through each
+                    for any message, 50 for answering a teacher&apos;s question).
+                    This ensures the algorithm&apos;s correctness through each
                     iteration.
                   </li>
                 </ul>
@@ -180,7 +178,7 @@ const RoomAnalysis = () => {
               <p>
                 <strong>Insert and Update Operations:</strong> These are
                 effectively O(1) when using a hash map for score tracking,
-                demonstrating the algorithm's efficiency in updating
+                demonstrating the algorithm&apos;s efficiency in updating
                 participation scores.
               </p>
             </section>
