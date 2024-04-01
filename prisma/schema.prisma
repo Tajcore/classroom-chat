@@ -20,6 +20,7 @@ model Room {
     description String?
     createdAt   DateTime  @default(now())
     updatedAt   DateTime  @updatedAt
+    active     Boolean   @default(true)
     chats       Message[]
 
     createdBy   User   @relation(fields: [createdById], references: [id])
