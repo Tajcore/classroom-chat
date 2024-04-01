@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 
 export const chatRouter = createTRPCRouter({
     create: protectedProcedure
@@ -28,12 +28,12 @@ export const chatRouter = createTRPCRouter({
             });
             return chat;
         }),
-    get: protectedProcedure
+    get: publicProcedure
         .input(z.object({ roomId: z.number() }))
         .query(async ({ ctx, input }) => {
-            const chats = ctx.db.room.findMany({
+            const chats = ctx.db.message.findMany({
                 where: {
-                    id: input.roomId,
+                    roomId: input.roomId,
                 },
                 include: {
                  createdBy: true,

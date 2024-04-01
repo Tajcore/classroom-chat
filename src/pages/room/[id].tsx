@@ -1,3 +1,4 @@
+"use client";
 import { useRouter } from "next/router";
 import { api } from "@/utils/api";
 import { CardContent, Card } from "@/components/ui/card";
@@ -5,22 +6,31 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { type Message, type User } from "@prisma/client";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { CircleDashed } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useRef, useState } from "react";
 
 const formSchema = z.object({
   content: z.string(),
@@ -42,18 +52,49 @@ const ChatRoom = () => {
     isLoading,
   } = api.room.get.useQuery({ id: Number(id) });
 
+  const { data: chatData, refetch } = api.chat.get.useQuery({
+    roomId: Number(id),
+  });
+
+  const { data: roomParticipants } = api.room.roomParticipants.useQuery({
+    id: Number(id),
+  });
+
   const { data: sessionData } = useSession();
 
   const { mutate: sendMessage, isPending: isSendingMessage } =
     api.chat.create.useMutation();
 
-  const handleSendMessage = (values: z.infer<typeof formSchema>) => {
+  const handleSendMessage = async (values: z.infer<typeof formSchema>) => {
     sendMessage({
       content: values.content,
       roomId: Number(id),
+    }, {
+      onSuccess: (data) => {
+        form.reset();
+        scrollToBottomOfChat();
+        // @ts-ignore
+        setMessages((prev) => [...prev, data]);
+      }
     });
-    form.reset();
   };
+
+  const scrollToBottomOfChat = () => {
+    ref.current?.scrollTo({
+      top: ref.current.scrollHeight,
+      behavior: "smooth",
+    });
+  };
+
+  const [messages, setMessages] = useState<MessageWithUser[]>([]);
+  const ref = useRef<HTMLDivElement>(null);
+  const loggedIn = !!sessionData?.user;
+
+  useEffect(() => {
+    if (chatData) {
+      setMessages(chatData);
+    }
+  }, [chatData]);
   if (error) return <div>failed to load</div>;
   if (isLoading)
     return (
@@ -87,7 +128,7 @@ const ChatRoom = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="grid h-full max-h-[300px] flex-1 gap-4 overflow-y-auto p-4"></div>
+                  <div className="flex h-full max-h-[300px] flex-1 flex-col gap-4 overflow-y-auto p-4"></div>
                 </div>
               </div>
             </CardContent>
@@ -98,6 +139,22 @@ const ChatRoom = () => {
 
   return (
     <div className="flex h-screen flex-col items-center justify-center">
+      <AlertDialog open={!loggedIn}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign in to send messages</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogDescription>
+            You need to sign in to send messages. Click the button below to sign
+            in.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => void signIn("azure-ad")}>
+              Sign in
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Card className="m-auto w-full max-w-3xl">
         <div className="flex h-[600px] flex-col">
           <CardContent className="flex flex-col items-center justify-center space-y-2 p-6">
@@ -138,9 +195,16 @@ const ChatRoom = () => {
                     </div>
                   </div>
                 </div>
-                <div className="grid h-full max-h-[300px] flex-1 gap-4 overflow-y-auto p-4">
-                  {roomData?.chats.map((message) => (
-                    <ChatMessage key={message.id} {...message} />
+                <div
+                  className="flex h-full max-h-[300px] flex-1 flex-col gap-y-1 overflow-y-auto p-4"
+                  ref={ref}
+                >
+                  {messages.map((message) => (
+                    <ChatMessage
+                      key={message.id}
+                      message={message}
+                      roomCreaterId={roomData?.createdBy?.id ?? ""}
+                    />
                   ))}
                 </div>
                 <div className="border-t border-gray-200 p-4">
@@ -156,7 +220,7 @@ const ChatRoom = () => {
                           <FormItem className="w-full">
                             <FormControl>
                               <Input
-                              className="w-full"
+                                className="w-full"
                                 placeholder="Type a message"
                                 {...field}
                               />
@@ -186,6 +250,40 @@ const ChatRoom = () => {
           </CardContent>
         </div>
       </Card>
+      <Card className="m-auto w-full max-w-xl">
+        <CardContent className="flex w-full flex-col items-center justify-center space-y-2 p-6">
+          <h1 className="text-2xl font-bold">Room Participants</h1>
+          <div className="flex w-full flex-col items-center justify-center space-y-2">
+            {roomParticipants?.map((user) => (
+              <div
+                key={user.id}
+                className="flex w-full  items-start justify-between gap-4 p-2"
+              >
+                <div className="flex items-center justify-start gap-2">
+                  <div className="relative h-10 w-10 rounded-full bg-gray-100 ">
+                    <Avatar>
+                      <AvatarImage src="https://randomuser.me/api/portraits" />
+                      <AvatarFallback>
+                        {user.name ? user.name[0] : ""}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-sm font-medium text-gray-600">
+                      {user.name}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {user.id.toString === roomData?.createdBy?.id
+                        ? "Teacher"
+                        : "Student"}{" "}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
@@ -193,7 +291,14 @@ const ChatRoom = () => {
 type MessageWithUser = Message & {
   createdBy: User;
 };
-const ChatMessage = (message: MessageWithUser) => {
+
+type ChatMessageProps = {
+  message: MessageWithUser;
+  roomCreaterId: string;
+};
+
+const ChatMessage = (props: ChatMessageProps) => {
+  const { message, roomCreaterId } = props;
   const { data: sessionData } = useSession();
   const isCurrentUser = message.userId === sessionData?.user?.id;
   const calculateRelativeTime = (date: Date) => {
@@ -209,9 +314,9 @@ const ChatMessage = (message: MessageWithUser) => {
     return `${seconds}s ago`;
   };
   return (
-    <div className="flex items-start space-x-2">
+    <div className="flex items-start">
       <div className="flex-1">
-        {isCurrentUser ? (
+        {!isCurrentUser ? (
           <div
             className={`grid grid-cols-12 items-center justify-start rounded-lg bg-blue-50 
          p-4`}
@@ -227,7 +332,8 @@ const ChatMessage = (message: MessageWithUser) => {
             <div className="col-span-11">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-gray-600">
-                  {message.createdBy.name}
+                  {message.createdBy.name}{" "}
+                  {message.createdBy.id === roomCreaterId ? "(Teacher)" : ""}
                 </h3>
                 <span className="text-xs text-gray-500">
                   {calculateRelativeTime(message.createdAt)}

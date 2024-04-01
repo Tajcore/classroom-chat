@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 
 export const roomRouter = createTRPCRouter({
   create: protectedProcedure
@@ -24,7 +24,7 @@ export const roomRouter = createTRPCRouter({
       });
       return room;
     }),
-  get: protectedProcedure
+  get: publicProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       const room = ctx.db.room.findUnique({
@@ -42,4 +42,18 @@ export const roomRouter = createTRPCRouter({
       });
       return room;
     }),
+  roomParticipants: publicProcedure.input(z.object({ id: z.number() })).query(async ({ ctx, input }) => {
+    // Find Rooms Where User is a Participant by Some Message Matching the Room ID
+    const rooms = ctx.db.user.findMany({
+      where: {
+        messages: {
+          some: {
+            roomId: input.id
+          }
+        }
+      }
+    })
+    return rooms;
+  }
+  ),
 });
