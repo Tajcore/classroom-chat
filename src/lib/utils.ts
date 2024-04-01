@@ -58,13 +58,14 @@ export function gradeParticipation(chatLog: ChatMessage[]): ParticipationScore {
   return scores;
 }
 
+type MessageWithUser = { id: number; content: string; createdAt: Date; updatedAt: Date; roomId: number; userId: string; } & { createdBy: { id: string; name: string | null; email: string | null; emailVerified: Date | null; image: string | null; } };
 
-export function convertChatObjectsToChatLog(chats: { id: number; content: string; createdAt: Date; updatedAt: Date; roomId: number; userId: string; } [], teacherId: string): ChatMessage[] {
+export function convertChatObjectsToChatLog(chats: MessageWithUser[], teacherId: string): ChatMessage[] {
   const chatLog: ChatMessage[] = [];
 
   chats.forEach((chat) => {
     chatLog.push({
-      // ts-ignore
+      // ts-expect-error
       name: chat.createdBy.name ?? "Anonymous",
       role: chat.userId === teacherId ? "Teacher" : "Student",
       timestamp: chat.createdAt,
