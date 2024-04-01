@@ -24,4 +24,22 @@ export const roomRouter = createTRPCRouter({
       });
       return room;
     }),
+  get: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const room = ctx.db.room.findUnique({
+        where: {
+          id: input.id,
+        },
+        include: {
+          createdBy: true,
+          chats: {
+            include: {
+              createdBy: true,
+            },
+          }
+        },
+      });
+      return room;
+    }),
 });

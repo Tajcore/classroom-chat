@@ -1,0 +1,260 @@
+import { useRouter } from "next/router";
+import { api } from "@/utils/api";
+import { CardContent, Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { format } from "date-fns";
+import { type Message, type User } from "@prisma/client";
+import { useSession } from "next-auth/react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { CircleDashed } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const formSchema = z.object({
+  content: z.string(),
+});
+
+const ChatRoom = () => {
+  const router = useRouter();
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      content: "",
+    },
+  });
+
+  const { id } = router.query;
+  const {
+    data: roomData,
+    error,
+    isLoading,
+  } = api.room.get.useQuery({ id: Number(id) });
+
+  const { data: sessionData } = useSession();
+
+  const { mutate: sendMessage, isPending: isSendingMessage } =
+    api.chat.create.useMutation();
+
+  const handleSendMessage = (values: z.infer<typeof formSchema>) => {
+    sendMessage({
+      content: values.content,
+      roomId: Number(id),
+    });
+    form.reset();
+  };
+  if (error) return <div>failed to load</div>;
+  if (isLoading)
+    return (
+      <div className="flex h-screen flex-col items-center justify-center">
+        <Card className="m-auto w-full max-w-3xl">
+          <div className="flex h-[600px] flex-col">
+            <CardContent className="flex flex-col items-center justify-center space-y-2 p-6">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-4 w-24" />
+            </CardContent>
+            <CardContent className="max-h-[400px] flex-1 p-0">
+              <div className="grid h-full">
+                <div className="flex h-full flex-col border-t border-gray-200">
+                  <div className="border-b border-gray-200 p-4 ">
+                    <div className="flex items-center space-x-4">
+                      <div className="relative h-10 w-10 rounded-full bg-gray-100 ">
+                        <Avatar>
+                          <AvatarImage src="https://randomuser.me/api/portraits" />
+                          <AvatarFallback />
+                        </Avatar>
+                      </div>
+                      <div className="grid gap-0.5">
+                        <div className="flex flex-col items-start justify-start gap-1">
+                          <div className="flex flex-row items-center justify-start gap-2">
+                            <Skeleton className="h-4 w-24" />
+                            <span className="h-3 w-3 animate-pulse rounded-full bg-green-400" />
+                          </div>
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid h-full max-h-[300px] flex-1 gap-4 overflow-y-auto p-4"></div>
+                </div>
+              </div>
+            </CardContent>
+          </div>
+        </Card>
+      </div>
+    );
+
+  return (
+    <div className="flex h-screen flex-col items-center justify-center">
+      <Card className="m-auto w-full max-w-3xl">
+        <div className="flex h-[600px] flex-col">
+          <CardContent className="flex flex-col items-center justify-center space-y-2 p-6">
+            <h1 className="text-2xl font-bold">{roomData?.name}</h1>
+            <p className="text-sm text-gray-500 ">
+              {roomData?.description ?? "No description"}
+            </p>
+            <h4 className="text-xs text-gray-500 ">
+              Created{" "}
+              {format(roomData?.createdAt ?? new Date(), "MMM dd, yyyy")}
+            </h4>
+          </CardContent>
+          <CardContent className="max-h-[400px] flex-1 p-0">
+            <div className="grid h-full">
+              <div className="flex h-full flex-col border-t border-gray-200">
+                <div className="border-b border-gray-200 p-4 ">
+                  <div className="flex items-center space-x-4">
+                    <div className="relative h-10 w-10 rounded-full bg-gray-100 ">
+                      <Avatar>
+                        <AvatarImage src="https://randomuser.me/api/portraits" />
+                        <AvatarFallback>
+                          {roomData?.createdBy?.name
+                            ? roomData.createdBy.name[0]
+                            : ""}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div className="grid gap-0.5">
+                      <div className="flex flex-col items-start justify-start gap-1">
+                        <div className="flex flex-row items-center justify-start gap-2">
+                          <h3 className="text-sm font-medium leading-none">
+                            {roomData?.createdBy?.name}
+                          </h3>
+                          <span className="h-3 w-3 animate-pulse rounded-full bg-green-400" />
+                        </div>
+                        <p className="text-xs text-gray-500">Teacher</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid h-full max-h-[300px] flex-1 gap-4 overflow-y-auto p-4">
+                  {roomData?.chats.map((message) => (
+                    <ChatMessage key={message.id} {...message} />
+                  ))}
+                </div>
+                <div className="border-t border-gray-200 p-4">
+                  <Form {...form}>
+                    <form
+                      onSubmit={form.handleSubmit(handleSendMessage)}
+                      className="sticky bottom-0 flex items-center justify-between gap-2"
+                    >
+                      <FormField
+                        control={form.control}
+                        name="content"
+                        render={({ field }) => (
+                          <FormItem className="w-full">
+                            <FormControl>
+                              <Input
+                              className="w-full"
+                                placeholder="Type a message"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="submit"
+                        className="flex flex-row items-center"
+                      >
+                        {isSendingMessage ? (
+                          <>
+                            <CircleDashed className="h-4 w-4 animate-spin" />
+                            <span className="ml-2">Sending</span>
+                          </>
+                        ) : (
+                          "Send"
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+type MessageWithUser = Message & {
+  createdBy: User;
+};
+const ChatMessage = (message: MessageWithUser) => {
+  const { data: sessionData } = useSession();
+  const isCurrentUser = message.userId === sessionData?.user?.id;
+  const calculateRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (days > 0) return format(date, "MMM dd, yyyy hh:mm a");
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    return `${seconds}s ago`;
+  };
+  return (
+    <div className="flex items-start space-x-2">
+      <div className="flex-1">
+        {isCurrentUser ? (
+          <div
+            className={`grid grid-cols-12 items-center justify-start rounded-lg bg-blue-50 
+         p-4`}
+          >
+            <div className="relative col-span-1 h-10 w-10 rounded-full bg-gray-100 ">
+              <Avatar>
+                <AvatarImage src="https://randomuser.me/api/portraits" />
+                <AvatarFallback>
+                  {message.createdBy.name ? message.createdBy.name[0] : ""}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+            <div className="col-span-11">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-gray-600">
+                  {message.createdBy.name}
+                </h3>
+                <span className="text-xs text-gray-500">
+                  {calculateRelativeTime(message.createdAt)}
+                </span>
+              </div>
+              <p className="text-sm">{message.content}</p>
+            </div>
+          </div>
+        ) : (
+          <div
+            className={`grid grid-cols-12 items-center justify-end rounded-lg bg-yellow-50 
+         p-4`}
+          >
+            <div className="col-span-full">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-gray-600">You</h3>
+                <span className="text-xs text-gray-500">
+                  {calculateRelativeTime(message.createdAt)}
+                </span>
+              </div>
+              <p className="text-sm">{message.content}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ChatRoom;
